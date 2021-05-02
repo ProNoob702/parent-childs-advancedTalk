@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useChildsDidUpdate } from "./lib.component";
+import { ChildsHeightsService } from "./childsHeights.service";
 import { IChildHeights } from "./redux-store/slice";
 
 const rawChildsList: string[] = ["child1", "child2", "child3"];
@@ -16,21 +16,42 @@ const sumHeights = (childsHeights: IChildHeights): number => {
 const App: React.FC<{}> = () => {
   const [childsList, setChildsList] = useState(rawChildsList);
   const [height, setHeight] = useState(0);
-  const onAllChildsReady = (childsHeights: IChildHeights) => {
-    console.log("Parent: ", childsHeights);
-    const newHeight = sumHeights(childsHeights);
-    setHeight(newHeight + 20);
-  };
 
-  const [onChildUpdated] = useChildsDidUpdate(
-    childsList.length,
-    onAllChildsReady
-  );
   const handleInpuBlur = (e: React.FocusEvent<any>) => {
     const newValue = e.currentTarget.value;
     const newList = [...childsList, newValue];
     setChildsList(newList);
   };
+
+  const onChildUpdate = (childKey: string) => {
+    console.log("Parent- child:", childKey, "has updated");
+    updateParentHeight();
+  };
+
+  const isChildsHeightsFilled = (childsHeightsObj: IChildHeights) => {
+    const keys = Object.keys(childsHeightsObj);
+    const keysCount = keys?.length;
+    return keysCount === childsList.length;
+  };
+
+  const updateParentHeight = () => {
+    const childsHeights = ChildsHeightsService.getChildsHeights();
+    console.log("Parent Heights ", childsHeights);
+    console.log("Parent Ready? ", isChildsHeightsFilled(childsHeights));
+    const newHeight = sumHeights(childsHeights);
+    setHeight(newHeight + 20);
+  };
+
+  useEffect(() => {
+    console.log("Parent Count updated ");
+    updateParentHeight();
+  }, [childsList.length]);
+
+  useEffect(() => {
+    console.log("Parent Mounted ");
+    updateParentHeight();
+  }, []);
+
   return (
     <>
       <div
@@ -43,7 +64,7 @@ const App: React.FC<{}> = () => {
         }}
       >
         {childsList.map((x) => (
-          <ChildHasChanges key={x} onChildUpdated={onChildUpdated} id={x} />
+          <ChildHasChanges key={x} id={x} onChildUpdate={onChildUpdate} />
         ))}
         Parent Height : {height} (Chils Heights + 20)
       </div>
@@ -56,21 +77,25 @@ const App: React.FC<{}> = () => {
 };
 
 interface IChildProps {
-  onChildUpdated: (key: string, newHeight: number) => void;
+  onChildUpdate: (childKey: string) => void;
   id: string;
 }
 
-const ChildHasChanges: React.FC<IChildProps> = ({ id, onChildUpdated }) => {
+const ChildHasChanges: React.FC<IChildProps> = ({ onChildUpdate, id }) => {
   const [counter, setCounter] = useState(50);
   const childRef = React.useRef<HTMLDivElement | any>();
   useDidUpdate(() => {
-    debugger;
-    if (childRef.current) onChildUpdated(id, childRef.current!.offsetHeight);
+    console.log("child has updated");
+    if (childRef.current) {
+      ChildsHeightsService.setChildHeight(id, childRef.current!.offsetHeight);
+      onChildUpdate(id);
+    }
   }, [counter]);
 
   useEffect(() => {
-    debugger;
-    if (childRef.current) onChildUpdated(id, childRef.current!.offsetHeight);
+    console.log("child did mount");
+    if (childRef.current)
+      ChildsHeightsService.setChildHeight(id, childRef.current!.offsetHeight);
   }, []);
 
   const updateCount = () => {
