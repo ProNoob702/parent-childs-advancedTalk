@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ChildsHeightsService } from "./childsHeights.service";
 import { IChildHeights } from "./redux-store/slice";
+import { useMutationObserver } from "./useMutationObserver";
 
 const rawChildsList: string[] = ["child1", "child2", "child3"];
 
@@ -28,24 +29,24 @@ const App: React.FC<{}> = () => {
     updateParentHeight();
   };
 
-  const isChildsHeightsFilled = (childsHeightsObj: IChildHeights) => {
-    const keys = Object.keys(childsHeightsObj);
-    const keysCount = keys?.length;
-    return keysCount === childsList.length;
-  };
+  // const isChildsHeightsFilled = (childsHeightsObj: IChildHeights) => {
+  //   const keys = Object.keys(childsHeightsObj);
+  //   const keysCount = keys?.length;
+  //   return keysCount === childsList.length;
+  // };
 
   const updateParentHeight = () => {
     const childsHeights = ChildsHeightsService.getChildsHeights();
-    console.log("Parent Heights ", childsHeights);
-    console.log("Parent Ready? ", isChildsHeightsFilled(childsHeights));
+    // console.log("Parent Heights ", childsHeights);
+    // console.log("Parent Ready? ", isChildsHeightsFilled(childsHeights));
     const newHeight = sumHeights(childsHeights);
     setHeight(newHeight + 20);
   };
 
-  useEffect(() => {
-    console.log("Parent Count updated ");
-    updateParentHeight();
-  }, [childsList.length]);
+  // useEffect(() => {
+  //   console.log("Parent Count updated ");
+  //   updateParentHeight();
+  // }, [childsList.length]);
 
   useEffect(() => {
     console.log("Parent Mounted ");
@@ -84,23 +85,29 @@ interface IChildProps {
 const ChildHasChanges: React.FC<IChildProps> = ({ onChildUpdate, id }) => {
   const [counter, setCounter] = useState(50);
   const childRef = React.useRef<HTMLDivElement | any>();
-  useDidUpdate(() => {
-    console.log("child has updated");
-    if (childRef.current) {
-      ChildsHeightsService.setChildHeight(id, childRef.current!.offsetHeight);
-      onChildUpdate(id);
-    }
-  }, [counter]);
+  // useDidUpdate(() => {
+  //   console.log("child has updated");
+  //   if (childRef.current) {
+  //     ChildsHeightsService.setChildHeight(id, childRef.current!.offsetHeight);
+  //     onChildUpdate(id);
+  //   }
+  // }, [counter]);
 
-  useEffect(() => {
-    console.log("child did mount");
-    if (childRef.current)
-      ChildsHeightsService.setChildHeight(id, childRef.current!.offsetHeight);
-  }, []);
+  // useEffect(() => {
+  //   console.log("child did mount");
+  //   if (childRef.current)
+  //     ChildsHeightsService.setChildHeight(id, childRef.current!.offsetHeight);
+  // }, []);
+
+  useMutationObserver(childRef.current, (mutationList) => {
+    console.log("mutationList", mutationList);
+    // onChildUpdate(id);
+  });
 
   const updateCount = () => {
     setCounter((x) => x + 1);
   };
+
   return (
     <div
       style={{ height: counter, background: "red", display: "flex" }}
