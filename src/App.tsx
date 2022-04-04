@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ChildsHeightsService } from "./childsHeights.service";
 import { IChildHeights } from "./redux-store/slice";
 import { useMutationObserver } from "./useMutationObserver";
@@ -24,23 +24,27 @@ const App: React.FC<{}> = () => {
     setChildsList(newList);
   };
 
-  const onChildUpdate = (childKey: string) => {
-    console.log("Parent- child:", childKey, "has updated");
-    updateParentHeight();
-  };
-
-  // const isChildsHeightsFilled = (childsHeightsObj: IChildHeights) => {
-  //   const keys = Object.keys(childsHeightsObj);
-  //   const keysCount = keys?.length;
-  //   return keysCount === childsList.length;
-  // };
-
-  const updateParentHeight = () => {
+  const updateParentHeight = useCallback(() => {
     const childsHeights = ChildsHeightsService.getChildsHeights();
-    // console.log("Parent Heights ", childsHeights);
-    // console.log("Parent Ready? ", isChildsHeightsFilled(childsHeights));
+    console.log("Parent Heights ", childsHeights);
+    console.log("Parent Ready? ", isChildsHeightsFilled());
     const newHeight = sumHeights(childsHeights);
     setHeight(newHeight + 20);
+  }, [setHeight, childsList]);
+
+  const onChildUpdate = useCallback(
+    (childKey: string) => {
+      console.log("Parent- child:", childKey, "has updated");
+      updateParentHeight();
+    },
+    [updateParentHeight]
+  );
+
+  const isChildsHeightsFilled = () => {
+    const childsHeights = ChildsHeightsService.getChildsHeights();
+    const keys = Object.keys(childsHeights);
+    const keysCount = keys?.length;
+    return keysCount === childsList.length;
   };
 
   // useEffect(() => {
@@ -51,7 +55,7 @@ const App: React.FC<{}> = () => {
   useEffect(() => {
     console.log("Parent Mounted ");
     updateParentHeight();
-  }, []);
+  }, [updateParentHeight]);
 
   return (
     <>
@@ -85,49 +89,42 @@ interface IChildProps {
 const ChildHasChanges: React.FC<IChildProps> = ({ onChildUpdate, id }) => {
   const [counter, setCounter] = useState(50);
   const childRef = React.useRef<HTMLDivElement | any>();
-  // useDidUpdate(() => {
-  //   console.log("child has updated");
-  //   if (childRef.current) {
-  //     ChildsHeightsService.setChildHeight(id, childRef.current!.offsetHeight);
-  //     onChildUpdate(id);
-  //   }
-  // }, [counter]);
+  const childTextRef = React.useRef<HTMLDivElement | any>();
 
-  // useEffect(() => {
-  //   console.log("child did mount");
-  //   if (childRef.current)
-  //     ChildsHeightsService.setChildHeight(id, childRef.current!.offsetHeight);
-  // }, []);
+  useEffect(() => {
+    console.log("child did mount");
+    if (childRef.current)
+      ChildsHeightsService.setChildHeight(id, childRef.current!.offsetHeight);
+  }, []);
 
-  useMutationObserver(childRef.current, (mutationList) => {
-    console.log("mutationList", mutationList);
-    // onChildUpdate(id);
-  });
+  const onListMutation = useCallback(
+    (mutationList: MutationRecord[]) => {
+      const mutation = mutationList?.[0];
+      if (!mutation) return;
+      const isAttributesMutation = mutation.type === "attributes";
+      if (!isAttributesMutation) return;
+      const child = childRef.current as HTMLElement;
+      const newHeight = child.clientHeight;
+      ChildsHeightsService.setChildHeight(id, newHeight);
+      onChildUpdate(id);
+    },
+    [id, onChildUpdate]
+  );
+
+  useMutationObserver(childRef.current, onListMutation);
 
   const updateCount = () => {
     setCounter((x) => x + 1);
   };
 
   return (
-    <div
-      style={{ height: counter, background: "red", display: "flex" }}
-      ref={childRef}
-    >
-      <p>Height : {counter}</p>
+    <div style={{ background: "red", display: "flex" }} ref={childRef}>
+      <p ref={childTextRef} style={{ height: counter }}>
+        Height : {counter}
+      </p>
       <button onClick={updateCount}>Add Height</button>
     </div>
   );
 };
-
-function useDidUpdate(callback: () => void, deps: any[]) {
-  const hasMount = useRef(false);
-  useEffect(() => {
-    if (hasMount.current) {
-      callback();
-    } else {
-      hasMount.current = true;
-    }
-  }, deps);
-}
 
 export default App;

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 
-const DEFAULT_OPTIONS = {
-  config: { attributes: true, childList: true, subtree: true },
-  debounceTime: 0,
-};
+const DEFAULT_OPTIONS: { debounceTime: number; config: MutationObserverInit } =
+  {
+    config: { attributes: true, subtree: true, childList: true },
+    debounceTime: 0,
+  };
 
 export const debounce = <F extends (...args: any[]) => any>(
   func: F,
@@ -40,6 +41,7 @@ export function useMutationObserver(
   const [observer, setObserver] = useState<MutationObserver | null>(null);
 
   useEffect(() => {
+    console.log("instansiate MutationObserver");
     const { debounceTime } = options;
     const obs = new MutationObserver(
       debounceTime > 0 ? debounce(cb, debounceTime) : cb
@@ -49,6 +51,7 @@ export function useMutationObserver(
 
   useEffect(() => {
     if (!observer) return;
+    console.log("start observe");
     const { config } = options;
     observer.observe(targetEl, config);
     return () => {
